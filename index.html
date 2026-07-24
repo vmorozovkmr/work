@@ -37,7 +37,7 @@
         </div>
     </div>
 
-    <!-- Блок Финансов (для обоих отчетов) -->
+    <!-- Блок Финансов -->
     <div class="section">
         <div class="title">💰 Финансовый остаток:</div>
         <div class="row"><span>💵 В кассе денег:</span><input type="number" id="cash" placeholder="руб."></div>
@@ -82,7 +82,7 @@
             // Извлекаем данные пользователя Telegram
             const chatInitData = tg.initDataUnsafe;
             
-            // Определяем ID чата и имя
+            // Находим ID чата
             data.chat_id = chatInitData.chat ? chatInitData.chat.id : (chatInitData.user ? chatInitData.user.id : null);
             data.user_name = chatInitData.user ? chatInitData.user.first_name : "Сотрудник";
 
@@ -91,17 +91,17 @@
                 return;
             }
 
-            // Отправляем данные в Яндекс Облако
+            // Прямой POST запрос в Яндекс Облако
             fetch('https://yandexcloud.net', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
             .then(() => {
-                tg.close(); // Закрываем форму после успешной отправки
+                tg.close(); // Закрываем шторку формы после отправки
             })
             .catch((err) => {
-                alert("Ошибка отправки в облако: " + err);
+                alert("Ошибка отправки: " + err);
             });
         }
     </script>
