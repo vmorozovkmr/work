@@ -1,43 +1,63 @@
-function sendReport() {
-    const data = {
-        type: reportType,
-        cash: document.getElementById('cash').value || '0',
-        onec: document.getElementById('onec').value || '0',
-        card: document.getElementById('card').value || '0'
-    };
+    <!-- ... здесь идет ваш остальной HTML-код с кнопкой ... -->
+    <button onclick="sendReport()">Отправить отчет</button>
 
-    if (reportType === 'evening') {
-        data.kassa = document.getElementById('kassa').value;
-        data.ii = document.getElementById('ii').value;
-        data.reestr = document.getElementById('reestr').value;
-        data.vk = document.getElementById('vk').value || '0';
-        data.tg = document.getElementById('tg').value || '0';
-        data.max = document.getElementById('max').value || '0';
-    }
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем на весь экран
 
-    // Извлекаем данные пользователя Telegram
-    const tg = window.Telegram.WebApp;
-    const chatInitData = tg.initDataUnsafe;
-    
-    // Определяем, куда слать ответ (в группу или личку) и имя сотрудника
-    data.chat_id = chatInitData.chat ? chatInitData.chat.id : (chatInitData.user ? chatInitData.user.id : null);
-    data.user_name = chatInitData.user ? chatInitData.user.first_name : "Сотрудник";
+        // Определяем тип отчета из URL (например, index.html?type=morning)
+        const urlParams = new URLSearchParams(window.location.search);
+        const reportType = urlParams.get('type') || 'evening';
 
-    if (!data.chat_id) {
-        alert("Ошибка: не удалось определить ID чата Telegram.");
-        return;
-    }
+        if (reportType === 'morning') {
+            document.getElementById('report-title').innerText = '📊 УТРЕННИЙ ОТЧЕТ';
+            document.getElementById('evening-only').style.display = 'none';
+        } else {
+            document.getElementById('report-title').innerText = '📊 ВЕЧЕРНИЙ ОТЧЕТ';
+        }
 
-    // Отправляем данные напрямую на адрес вашей функции в Яндекс Облаке
-    fetch('https://yandexcloud.net', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    })
-    .then(() => {
-        tg.close(); // Закрываем шторку приложения после успешной отправки
-    })
-    .catch((err) => {
-        alert("Ошибка отправки в облако: " + err);
-    });
-}
+        function sendReport() {
+            const data = {
+                type: reportType,
+                cash: document.getElementById('cash').value || '0',
+                onec: document.getElementById('onec').value || '0',
+                card: document.getElementById('card').value || '0'
+            };
+
+            if (reportType === 'evening') {
+                data.kassa = document.getElementById('kassa').value;
+                data.ii = document.getElementById('ii').value;
+                data.reestr = document.getElementById('reestr').value;
+                data.vk = document.getElementById('vk').value || '0';
+                data.tg = document.getElementById('tg').value || '0';
+                data.max = document.getElementById('max').value || '0';
+            }
+
+            // Извлекаем данные пользователя Telegram
+            const chatInitData = tg.initDataUnsafe;
+            
+            // Определяем, куда слать ответ (в группу или личку) и имя сотрудника
+            data.chat_id = chatInitData.chat ? chatInitData.chat.id : (chatInitData.user ? chatInitData.user.id : null);
+            data.user_name = chatInitData.user ? chatInitData.user.first_name : "Сотрудник";
+
+            if (!data.chat_id) {
+                alert("Ошибка: не удалось определить ID чата Telegram.");
+                return;
+            }
+
+            // Отправляем данные напрямую на адрес вашей функции в Яндекс Облаке
+            fetch('https://yandexcloud.net', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(() => {
+                tg.close(); // Закрываем шторку приложения после успешной отправки
+            })
+            .catch((err) => {
+                alert("Ошибка отправки в облако: " + err);
+            });
+        }
+    </script>
+</body>
+</html>
