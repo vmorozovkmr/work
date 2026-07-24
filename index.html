@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Отчетность</title>
-    <!-- Подключаем скрипт Telegram -->
     <script src="https://telegram.org"></script>
     <style>
         body { font-family: Arial, sans-serif; padding: 15px; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); }
@@ -20,7 +19,6 @@
 
     <h2 id="report-title">📊 ОТЧЕТ</h2>
 
-    <!-- Блок для Вечернего отчета -->
     <div id="evening-only">
         <div class="section">
             <div class="title">📂 Документооборот и учет:</div>
@@ -37,7 +35,6 @@
         </div>
     </div>
 
-    <!-- Блок Финансов -->
     <div class="section">
         <div class="title">💰 Финансовый остаток:</div>
         <div class="row"><span>💵 В кассе денег:</span><input type="number" id="cash" placeholder="руб."></div>
@@ -49,9 +46,8 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем на весь экран
+        tg.expand();
 
-        // Определяем тип отчета из URL
         const urlParams = new URLSearchParams(window.location.search);
         const reportType = urlParams.get('type') || 'evening';
 
@@ -79,30 +75,9 @@
                 data.max = document.getElementById('max').value || '0';
             }
 
-            // Извлекаем данные пользователя Telegram
-            const chatInitData = tg.initDataUnsafe;
-            
-            // Находим ID чата
-            data.chat_id = chatInitData.chat ? chatInitData.chat.id : (chatInitData.user ? chatInitData.user.id : null);
-            data.user_name = chatInitData.user ? chatInitData.user.first_name : "Сотрудник";
-
-            if (!data.chat_id) {
-                alert("Ошибка: не удалось определить ID чата Telegram.");
-                return;
-            }
-
-            // Прямой POST запрос в Яндекс Облако
-            fetch('https://yandexcloud.net', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(() => {
-                tg.close(); // Закрываем шторку формы после отправки
-            })
-            .catch((err) => {
-                alert("Ошибка отправки: " + err);
-            });
+            // Отправляем данные стандартным методом Telegram
+            tg.sendData(JSON.stringify(data));
+            tg.close();
         }
     </script>
 </body>
