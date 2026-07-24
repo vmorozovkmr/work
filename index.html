@@ -4,15 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Отчетность</title>
+    <!-- ИСПРАВЛЕНО: Подключен корректный скрипт Telegram WebApp SDK -->
     <script src="https://telegram.org"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 15px; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); }
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 15px; 
+            background: var(--tg-theme-bg-color, #fff); 
+            color: var(--tg-theme-text-color, #000); 
+        }
         .section { margin-bottom: 15px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
         .title { font-weight: bold; margin-bottom: 8px; }
         .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         input[type="number"] { width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
         select { padding: 5px; border-radius: 4px; }
-        button { width: 100%; padding: 12px; background: #248bca; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            background: var(--tg-theme-button-color, #248bca); 
+            color: var(--tg-theme-button-text-color, white); 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            cursor: pointer; 
+        }
     </style>
 </head>
 <body>
@@ -29,24 +44,27 @@
 
         <div class="section">
             <div class="title">📱 Маркетинг и соцсети:</div>
-            <div class="row"><span>📹 Постов в ВК:</span><input type="number" id="vk" value="0"></div>
-            <div class="row"><span>✈️🔖 Постов в ТГ:</span><input type="number" id="tg" value="0"></div>
-            <div class="row"><span>📺 Постов в Макс:</span><input type="number" id="max" value="0"></div>
+            <div class="row"><span>📹 Постов в ВК:</span><input type="number" id="vk" value="0" min="0"></div>
+            <div class="row"><span>✈️🔖 Постов в ТГ:</span><input type="number" id="tg" value="0" min="0"></div>
+            <div class="row"><span>📺 Постов в Макс:</span><input type="number" id="max" value="0" min="0"></div>
         </div>
     </div>
 
     <div class="section">
         <div class="title">💰 Финансовый остаток:</div>
-        <div class="row"><span>💵 В кассе денег:</span><input type="number" id="cash" placeholder="руб."></div>
-        <div class="row"><span>🖥 В 1С денег:</span><input type="number" id="onec" placeholder="руб."></div>
-        <div class="row"><span>💳 На карте денег:</span><input type="number" id="card" placeholder="руб."></div>
+        <div class="row"><span>💵 В кассе денег:</span><input type="number" id="cash" placeholder="руб." min="0"></div>
+        <div class="row"><span>🖥 В 1С денег:</span><input type="number" id="onec" placeholder="руб." min="0"></div>
+        <div class="row"><span>💳 На карте денег:</span><input type="number" id="card" placeholder="руб." min="0"></div>
     </div>
 
     <button onclick="sendReport()">Отправить отчет</button>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.expand();
+            tg.ready();
+        }
 
         const urlParams = new URLSearchParams(window.location.search);
         const reportType = urlParams.get('type') || 'evening';
@@ -59,11 +77,25 @@
         }
 
         function sendReport() {
+            const cashVal = document.getElementById('cash').value;
+            const onecVal = document.getElementById('onec').value;
+            const cardVal = document.getElementById('card').value;
+
+            // Валидация обязательных финансовых полей
+            if (!cashVal || !onecVal || !cardVal) {
+                if (tg && tg.showAlert) {
+                    tg.showAlert("⚠️ Пожалуйста, заполните все финансовые поля!");
+                } else {
+                    alert("⚠️ Пожалуйста, заполните все финансовые поля!");
+                }
+                return;
+            }
+
             const data = {
                 type: reportType,
-                cash: document.getElementById('cash').value || '0',
-                onec: document.getElementById('onec').value || '0',
-                card: document.getElementById('card').value || '0'
+                cash: cashVal,
+                onec: onecVal,
+                card: cardVal
             };
 
             if (reportType === 'evening') {
@@ -75,9 +107,16 @@
                 data.max = document.getElementById('max').value || '0';
             }
 
-            // Отправляем данные стандартным методом Telegram
-            tg.sendData(JSON.stringify(data));
-            tg.close();
+            if (tg) {
+                try {
+                    tg.sendData(JSON.stringify(data));
+                    tg.close();
+                } catch (e) {
+                    console.error("Ошибка sendData. Убедитесь, что WebApp открыт через KeyboardButton:", e);
+                }
+            } else {
+                console.log("Данные (Запуск вне Telegram):", data);
+            }
         }
     </script>
 </body>
