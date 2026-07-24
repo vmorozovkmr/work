@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Отчетность</title>
-    <!-- ИСПРАВЛЕНО: Подключен корректный скрипт Telegram WebApp SDK -->
     <script src="https://telegram.org"></script>
     <style>
         body { 
@@ -28,6 +27,7 @@
             font-size: 16px; 
             cursor: pointer; 
         }
+        button:disabled { background: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -57,7 +57,7 @@
         <div class="row"><span>💳 На карте денег:</span><input type="number" id="card" placeholder="руб." min="0"></div>
     </div>
 
-    <button onclick="sendReport()">Отправить отчет</button>
+    <button id="submit-btn" onclick="sendReport()">Отправить отчет</button>
 
     <script>
         const tg = window.Telegram?.WebApp;
@@ -66,8 +66,16 @@
             tg.ready();
         }
 
+        // ВАЖНО: Вставьте сюда ваш уникальный URL функции из Яндекс Облака
+        const YANDEX_FUNCTION_URL = "https://yandexcloud.net";
+
         const urlParams = new URLSearchParams(window.location.search);
         const reportType = urlParams.get('type') || 'evening';
+
+        // Безопасное получение параметров пользователя Telegram
+        const initDataUnsafe = tg?.initDataUnsafe || {};
+        const chatId = initDataUnsafe.user?.id || urlParams.get('chat_id');
+        const firstName = initDataUnsafe.user?.first_name || "Сотрудник";
 
         if (reportType === 'morning') {
             document.getElementById('report-title').innerText = '📊 УТРЕННИЙ ОТЧЕТ';
@@ -76,46 +84,61 @@
             document.getElementById('report-title').innerText = '📊 ВЕЧЕРНИЙ ОТЧЕТ';
         }
 
-        function sendReport() {
+        async function sendReport() {
+            const btn = document.getElementById('submit-btn');
             const cashVal = document.getElementById('cash').value;
             const onecVal = document.getElementById('onec').value;
             const cardVal = document.getElementById('card').value;
 
-            // Валидация обязательных финансовых полей
             if (!cashVal || !onecVal || !cardVal) {
-                if (tg && tg.showAlert) {
-                    tg.showAlert("⚠️ Пожалуйста, заполните все финансовые поля!");
-                } else {
-                    alert("⚠️ Пожалуйста, заполните все финансовые поля!");
-                }
+                alert("⚠️ Пожалуйста, заполните все финансовые поля!");
                 return;
             }
 
-            const data = {
-                type: reportType,
-                cash: cashVal,
-                onec: onecVal,
-                card: cardVal
+            btn.disabled = true;
+            btn.innerText = "Отправка...";
+
+            // Собираем данные в структуру для передачи бэкенду
+            const payload = {
+                is_direct_fetch: true,
+                chat_id: chatId,
+                first_name: firstName,
+                data: {
+                    type: reportType,
+                    cash: cashVal,
+                    onec: onecVal,
+                    card: cardVal
+                }
             };
 
             if (reportType === 'evening') {
-                data.kassa = document.getElementById('kassa').value;
-                data.ii = document.getElementById('ii').value;
-                data.reestr = document.getElementById('reestr').value;
-                data.vk = document.getElementById('vk').value || '0';
-                data.tg = document.getElementById('tg').value || '0';
-                data.max = document.getElementById('max').value || '0';
+                payload.data.kassa = document.getElementById('kassa').value;
+                payload.data.ii = document.getElementById('ii').value;
+                payload.data.reestr = document.getElementById('reestr').value;
+                payload.data.vk = document.getElementById('vk').value || '0';
+                payload.data.tg = document.getElementById('tg').value || '0';
+                payload.data.max = document.getElementById('max').value || '0';
             }
 
-            if (tg) {
-                try {
-                    tg.sendData(JSON.stringify(data));
-                    tg.close();
-                } catch (e) {
-                    console.error("Ошибка sendData. Убедитесь, что WebApp открыт через KeyboardButton:", e);
+            try {
+                // Прямой сетевой запрос в обход ограничений Telegram Desktop
+                const response = await fetch(YANDEX_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    if (tg) tg.close();
+                } else {
+                    alert("Ошибка сервера при отправке отчета.");
+                    btn.disabled = false;
+                    btn.innerText = "Отправить отчет";
                 }
-            } else {
-                console.log("Данные (Запуск вне Telegram):", data);
+            } catch (e) {
+                alert("Ошибка сети. Проверьте интернет соединение.");
+                btn.disabled = false;
+                btn.innerText = "Отправить отчет";
             }
         }
     </script>
