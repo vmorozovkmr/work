@@ -15,23 +15,29 @@ function sendReport() {
         data.max = document.getElementById('max').value || '0';
     }
 
-    // Замените ТОКЕН на ваш токен от BotFather прямо внутри ссылки:
-    const token = "8668713260:AAF63e7UbD48XUwjwU479hmYAmXYjvAxJKk";
+    // Извлекаем данные пользователя Telegram
+    const tg = window.Telegram.WebApp;
+    const chatInitData = tg.initDataUnsafe;
     
-    // Получаем ID чата, в котором открыто приложение
-    const chatInitData = window.Telegram.WebApp.initDataUnsafe;
-    const chatId = chatInitData.chat ? chatInitData.chat.id : chatInitData.user.id;
+    // Определяем, куда слать ответ (в группу или личку) и имя сотрудника
+    data.chat_id = chatInitData.chat ? chatInitData.chat.id : (chatInitData.user ? chatInitData.user.id : null);
+    data.user_name = chatInitData.user ? chatInitData.user.first_name : "Сотрудник";
 
-    // Отправляем данные напрямую на вебхук вашей функции, передавая chat_id
-    fetch(`https://yandexcloud.net{chatId}`, {
+    if (!data.chat_id) {
+        alert("Ошибка: не удалось определить ID чата Telegram.");
+        return;
+    }
+
+    // Отправляем данные напрямую на адрес вашей функции в Яндекс Облаке
+    fetch('https://yandexcloud.net', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
     .then(() => {
-        window.Telegram.WebApp.close();
+        tg.close(); // Закрываем шторку приложения после успешной отправки
     })
     .catch((err) => {
-        alert("Ошибка отправки: " + err);
+        alert("Ошибка отправки в облако: " + err);
     });
 }
