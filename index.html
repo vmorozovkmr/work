@@ -1,64 +1,3 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Отчетность</title>
-    <script src="https://telegram.org"></script>
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            padding: 15px; 
-            background: var(--tg-theme-bg-color, #fff); 
-            color: var(--tg-theme-text-color, #000); 
-        }
-        .section { margin-bottom: 15px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
-        .title { font-weight: bold; margin-bottom: 8px; }
-        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        input[type="number"] { width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
-        select { padding: 5px; border-radius: 4px; }
-        button { 
-            width: 100%; 
-            padding: 12px; 
-            background: var(--tg-theme-button-color, #248bca); 
-            color: var(--tg-theme-button-text-color, white); 
-            border: none; 
-            border-radius: 8px; 
-            font-size: 16px; 
-            cursor: pointer; 
-        }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-    </style>
-</head>
-<body>
-
-    <h2 id="report-title">📊 ОТЧЕТ</h2>
-
-    <div id="evening-only">
-        <div class="section">
-            <div class="title">📂 Документооборот и учет:</div>
-            <div class="row"><span>Кассовая книга:</span><select id="kassa"><option value="🟢 Скинута">🟢 Скинута</option><option value="🔴 Нет">🔴 Нет</option></select></div>
-            <div class="row"><span>Отчет ИИ:</span><select id="ii"><option value="🟢 Заполнен">🟢 Заполнен</option><option value="🔴 Нет">🔴 Нет</option></select></div>
-            <div class="row"><span>Реестр:</span><select id="reestr"><option value="🟢 Заполнен">🟢 Заполнен</option><option value="🔴 Нет">🔴 Нет</option></select></div>
-        </div>
-
-        <div class="section">
-            <div class="title">📱 Маркетинг и соцсети:</div>
-            <div class="row"><span>📹 Постов в ВК:</span><input type="number" id="vk" value="0" min="0"></div>
-            <div class="row"><span>✈️🔖 Постов в ТГ:</span><input type="number" id="tg" value="0" min="0"></div>
-            <div class="row"><span>📺 Постов в Макс:</span><input type="number" id="max" value="0" min="0"></div>
-        </div>
-    </div>
-
-    <div class="section">
-        <div class="title">💰 Финансовый остаток:</div>
-        <div class="row"><span>💵 В кассе денег:</span><input type="number" id="cash" placeholder="руб." min="0"></div>
-        <div class="row"><span>🖥 В 1С денег:</span><input type="number" id="onec" placeholder="руб." min="0"></div>
-        <div class="row"><span>💳 На карте денег:</span><input type="number" id="card" placeholder="руб." min="0"></div>
-    </div>
-
-    <button id="submit-btn" onclick="sendReport()">Отправить отчет</button>
-
     <script>
         const tg = window.Telegram?.WebApp;
         if (tg) {
@@ -66,7 +5,7 @@
             tg.ready();
         }
 
-        const YANDEX_FUNCTION_URL = "https://functions.yandexcloud.net/d4eh7b1d5l3nqapgrh9o";
+        const YANDEX_FUNCTION_URL = "https://yandexcloud.net";
 
         const urlParams = new URLSearchParams(window.location.search);
         const reportType = urlParams.get('type') || 'evening';
@@ -92,13 +31,19 @@
                 return;
             }
 
+            // ЗАЩИТА ОТ NULL: Если Telegram Desktop скрыл ID, запрашиваем его вручную
+            if (!chatId || chatId === 'null' || chatId === 'undefined') {
+                chatId = prompt("Компьютер скрыл ваш Telegram ID. Введите ваш chat_id или ID вашей группы (-1001752104898) для ручной отправки:");
+                if (!chatId) return;
+            }
+
             btn.disabled = true;
             btn.innerText = "Отправка...";
 
             const payload = {
                 is_direct_fetch: true,
                 tg_init_data: tg?.initData || "",
-                chat_id: chatId ? String(chatId) : null,
+                chat_id: String(chatId).trim(),
                 first_name: firstName,
                 data: {
                     type: reportType,
@@ -135,11 +80,9 @@
                     btn.innerText = "Отправить отчет";
                 }
             } catch (e) {
-                alert("Ошибка сети. Проверьте internet соединение.");
+                alert("Ошибка сети. Проверьте интернет соединение.");
                 btn.disabled = false;
                 btn.innerText = "Отправить отчет";
             }
         }
     </script>
-</body>
-</html>
