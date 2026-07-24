@@ -1,11 +1,57 @@
-    <!-- ... здесь идет ваш остальной HTML-код с кнопкой ... -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчетность</title>
+    <!-- Подключаем скрипт Telegram -->
+    <script src="https://telegram.org"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 15px; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); }
+        .section { margin-bottom: 15px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+        .title { font-weight: bold; margin-bottom: 8px; }
+        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        input[type="number"] { width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        select { padding: 5px; border-radius: 4px; }
+        button { width: 100%; padding: 12px; background: #248bca; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h2 id="report-title">📊 ОТЧЕТ</h2>
+
+    <!-- Блок для Вечернего отчета -->
+    <div id="evening-only">
+        <div class="section">
+            <div class="title">📂 Документооборот и учет:</div>
+            <div class="row"><span>Кассовая книга:</span><select id="kassa"><option value="🟢 Скинута">🟢 Скинута</option><option value="🔴 Нет">🔴 Нет</option></select></div>
+            <div class="row"><span>Отчет ИИ:</span><select id="ii"><option value="🟢 Заполнен">🟢 Заполнен</option><option value="🔴 Нет">🔴 Нет</option></select></div>
+            <div class="row"><span>Реестр:</span><select id="reestr"><option value="🟢 Заполнен">🟢 Заполнен</option><option value="🔴 Нет">🔴 Нет</option></select></div>
+        </div>
+
+        <div class="section">
+            <div class="title">📱 Маркетинг и соцсети:</div>
+            <div class="row"><span>📹 Постов в ВК:</span><input type="number" id="vk" value="0"></div>
+            <div class="row"><span>✈️🔖 Постов в ТГ:</span><input type="number" id="tg" value="0"></div>
+            <div class="row"><span>📺 Постов в Макс:</span><input type="number" id="max" value="0"></div>
+        </div>
+    </div>
+
+    <!-- Блок Финансов (для обоих отчетов) -->
+    <div class="section">
+        <div class="title">💰 Финансовый остаток:</div>
+        <div class="row"><span>💵 В кассе денег:</span><input type="number" id="cash" placeholder="руб."></div>
+        <div class="row"><span>🖥 В 1С денег:</span><input type="number" id="onec" placeholder="руб."></div>
+        <div class="row"><span>💳 На карте денег:</span><input type="number" id="card" placeholder="руб."></div>
+    </div>
+
     <button onclick="sendReport()">Отправить отчет</button>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand(); // Разворачиваем на весь экран
 
-        // Определяем тип отчета из URL (например, index.html?type=morning)
+        // Определяем тип отчета из URL
         const urlParams = new URLSearchParams(window.location.search);
         const reportType = urlParams.get('type') || 'evening';
 
@@ -36,7 +82,7 @@
             // Извлекаем данные пользователя Telegram
             const chatInitData = tg.initDataUnsafe;
             
-            // Определяем, куда слать ответ (в группу или личку) и имя сотрудника
+            // Определяем ID чата и имя
             data.chat_id = chatInitData.chat ? chatInitData.chat.id : (chatInitData.user ? chatInitData.user.id : null);
             data.user_name = chatInitData.user ? chatInitData.user.first_name : "Сотрудник";
 
@@ -45,14 +91,14 @@
                 return;
             }
 
-            // Отправляем данные напрямую на адрес вашей функции в Яндекс Облаке
+            // Отправляем данные в Яндекс Облако
             fetch('https://yandexcloud.net', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
             .then(() => {
-                tg.close(); // Закрываем шторку приложения после успешной отправки
+                tg.close(); // Закрываем форму после успешной отправки
             })
             .catch((err) => {
                 alert("Ошибка отправки в облако: " + err);
