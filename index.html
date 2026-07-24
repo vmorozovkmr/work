@@ -92,44 +92,30 @@
                 return;
             }
 
-            const data = {
-                type: reportType,
-                cash: cashVal,
-                onec: onecVal,
-                card: cardVal
-            };
-
-            if (reportType === 'evening') {
-                data.kassa = document.getElementById('kassa').value;
-                data.ii = document.getElementById('ii').value;
-                data.reestr = document.getElementById('reestr').value;
-                data.vk = document.getElementById('vk').value || '0';
-                data.tg = document.getElementById('tg').value || '0';
-                data.max = document.getElementById('max').value || '0';
-            }
-
-            // ЕСЛИ ОТКРЫЛИ НА ТЕЛЕФОНЕ И ЧЕРЕЗ КЛАВИАТУРУ: шлем нативным быстрым методом
-            // (Критерий: наличие нативного chat_id и отсутствие режима десктопного меню)
-            if (tg && tg.initData && chatId && chatId !== 'null' && tg.initDataUnsafe?.user?.id) {
-                try {
-                    tg.sendData(JSON.stringify(data));
-                    tg.close();
-                    return;
-                } catch(e) {
-                    console.log("Нативная отправка не удалась, переключаемся на fetch");
-                }
-            }
-
-            // ЕСЛИ ОТКРЫЛИ НА ПК ЧЕРЕЗ МЕНЮ: шлем универсальным сетевым запросом
             btn.disabled = true;
             btn.innerText = "Отправка...";
 
             const payload = {
                 is_direct_fetch: true,
-                chat_id: chatId && chatId !== 'null' ? String(chatId) : null,
+                tg_init_data: tg?.initData || "",
+                chat_id: chatId ? String(chatId) : null,
                 first_name: firstName,
-                data: data
+                data: {
+                    type: reportType,
+                    cash: cashVal,
+                    onec: onecVal,
+                    card: cardVal
+                }
             };
+
+            if (reportType === 'evening') {
+                payload.data.kassa = document.getElementById('kassa').value;
+                payload.data.ii = document.getElementById('ii').value;
+                payload.data.reestr = document.getElementById('reestr').value;
+                payload.data.vk = document.getElementById('vk').value || '0';
+                payload.data.tg = document.getElementById('tg').value || '0';
+                payload.data.max = document.getElementById('max').value || '0';
+            }
 
             try {
                 const response = await fetch(YANDEX_FUNCTION_URL, {
