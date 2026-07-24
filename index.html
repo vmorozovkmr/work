@@ -27,7 +27,6 @@
             font-size: 16px; 
             cursor: pointer; 
         }
-        button:disabled { background: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -57,7 +56,7 @@
         <div class="row"><span>💳 На карте денег:</span><input type="number" id="card" placeholder="руб." min="0"></div>
     </div>
 
-    <button id="submit-btn" onclick="sendReport()">Отправить отчет</button>
+    <button onclick="sendReport()">Отправить отчет</button>
 
     <script>
         const tg = window.Telegram?.WebApp;
@@ -66,13 +65,8 @@
             tg.ready();
         }
 
-        const YANDEX_FUNCTION_URL = "https://functions.yandexcloud.net/d4eh7b1d5l3nqapgrh9o";
-
         const urlParams = new URLSearchParams(window.location.search);
         const reportType = urlParams.get('type') || 'evening';
-
-        let chatId = urlParams.get('chat_id') || tg?.initDataUnsafe?.user?.id;
-        let firstName = tg?.initDataUnsafe?.user?.first_name || "Сотрудник";
 
         if (reportType === 'morning') {
             document.getElementById('report-title').innerText = '📊 УТРЕННИЙ ОТЧЕТ';
@@ -81,63 +75,39 @@
             document.getElementById('report-title').innerText = '📊 ВЕЧЕРНИЙ ОТЧЕТ';
         }
 
-        async function sendReport() {
-            const btn = document.getElementById('submit-btn');
+        function sendReport() {
             const cashVal = document.getElementById('cash').value;
             const onecVal = document.getElementById('onec').value;
             const cardVal = document.getElementById('card').value;
 
             if (!cashVal || !onecVal || !cardVal) {
-                alert("⚠️ Пожалуйста, заполните все финансовые поля!");
+                if (tg && tg.showAlert) {
+                    tg.showAlert("⚠️ Пожалуйста, заполните все финансовые поля!");
+                } else {
+                    alert("⚠️ Пожалуйста, заполните все финансовые поля!");
+                }
                 return;
             }
 
-            btn.disabled = true;
-            btn.innerText = "Отправка...";
-
-            const payload = {
-                is_direct_fetch: true,
-                tg_init_data: tg?.initData || "",
-                chat_id: chatId ? String(chatId) : null,
-                first_name: firstName,
-                data: {
-                    type: reportType,
-                    cash: cashVal,
-                    onec: onecVal,
-                    card: cardVal
-                }
+            const data = {
+                type: reportType,
+                cash: cashVal,
+                onec: onecVal,
+                card: cardVal
             };
 
             if (reportType === 'evening') {
-                payload.data.kassa = document.getElementById('kassa').value;
-                payload.data.ii = document.getElementById('ii').value;
-                payload.data.reestr = document.getElementById('reestr').value;
-                payload.data.vk = document.getElementById('vk').value || '0';
-                payload.data.tg = document.getElementById('tg').value || '0';
-                payload.data.max = document.getElementById('max').value || '0';
+                data.kassa = document.getElementById('kassa').value;
+                data.ii = document.getElementById('ii').value;
+                data.reestr = document.getElementById('reestr').value;
+                data.vk = document.getElementById('vk').value || '0';
+                data.tg = document.getElementById('tg').value || '0';
+                data.max = document.getElementById('max').value || '0';
             }
 
-            try {
-                const response = await fetch(YANDEX_FUNCTION_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    btn.innerText = "Успешно отправлено!";
-                    setTimeout(() => {
-                        if (tg) tg.close();
-                    }, 1000);
-                } else {
-                    alert("Ошибка сервера при отправке отчета.");
-                    btn.disabled = false;
-                    btn.innerText = "Отправить отчет";
-                }
-            } catch (e) {
-                alert("Ошибка сети. Проверьте интернет соединение.");
-                btn.disabled = false;
-                btn.innerText = "Отправить отчет";
+            if (tg) {
+                tg.sendData(JSON.stringify(data));
+                tg.close();
             }
         }
     </script>
