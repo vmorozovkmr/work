@@ -1,64 +1,3 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Отчетность</title>
-    <script src="https://telegram.org"></script>
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            padding: 15px; 
-            background: var(--tg-theme-bg-color, #fff); 
-            color: var(--tg-theme-text-color, #000); 
-        }
-        .section { margin-bottom: 15px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
-        .title { font-weight: bold; margin-bottom: 8px; }
-        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        input[type="number"] { width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
-        select { padding: 5px; border-radius: 4px; }
-        button { 
-            width: 100%; 
-            padding: 12px; 
-            background: var(--tg-theme-button-color, #248bca); 
-            color: var(--tg-theme-button-text-color, white); 
-            border: none; 
-            border-radius: 8px; 
-            font-size: 16px; 
-            cursor: pointer; 
-        }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-    </style>
-</head>
-<body>
-
-    <h2 id="report-title">📊 ОТЧЕТ</h2>
-
-    <div id="evening-only">
-        <div class="section">
-            <div class="title">📂 Документооборот и учет:</div>
-            <div class="row"><span>Кассовая книга:</span><select id="kassa"><option value="🟢 Скинута">🟢 Скинута</option><option value="🔴 Нет">🔴 Нет</option></select></div>
-            <div class="row"><span>Отчет ИИ:</span><select id="ii"><option value="🟢 Заполнен">🟢 Заполнен</option><option value="🔴 Нет">🔴 Нет</option></select></div>
-            <div class="row"><span>Реестр:</span><select id="reestr"><option value="🟢 Заполнен">🟢 Заполнен</option><option value="🔴 Нет">🔴 Нет</option></select></div>
-        </div>
-
-        <div class="section">
-            <div class="title">📱 Маркетинг и соцсети:</div>
-            <div class="row"><span>📹 Постов в ВК:</span><input type="number" id="vk" value="0" min="0"></div>
-            <div class="row"><span>✈️🔖 Постов в ТГ:</span><input type="number" id="tg" value="0" min="0"></div>
-            <div class="row"><span>📺 Постов в Макс:</span><input type="number" id="max" value="0" min="0"></div>
-        </div>
-    </div>
-
-    <div class="section">
-        <div class="title">💰 Финансовый остаток:</div>
-        <div class="row"><span>💵 В кассе денег:</span><input type="number" id="cash" placeholder="руб." min="0"></div>
-        <div class="row"><span>🖥 В 1С денег:</span><input type="number" id="onec" placeholder="руб." min="0"></div>
-        <div class="row"><span>💳 На карте денег:</span><input type="number" id="card" placeholder="руб." min="0"></div>
-    </div>
-
-    <button id="submit-btn" onclick="sendReport()">Отправить отчет</button>
-
     <script>
         const tg = window.Telegram?.WebApp;
         if (tg) {
@@ -66,16 +5,15 @@
             tg.ready();
         }
 
-        // ВАЖНО: Вставьте сюда ваш уникальный URL функции из Яндекс Облака
-        const YANDEX_FUNCTION_URL = "https://functions.yandexcloud.net/d4eh7b1d5l3nqapgrh9o";
+        // ВАЖНО: Ваш точный URL функции Яндекс Облака
+        const YANDEX_FUNCTION_URL = "https://yandexcloud.net";
 
         const urlParams = new URLSearchParams(window.location.search);
         const reportType = urlParams.get('type') || 'evening';
 
-        // Безопасное получение параметров пользователя Telegram
-        const initDataUnsafe = tg?.initDataUnsafe || {};
-        const chatId = initDataUnsafe.user?.id || urlParams.get('chat_id');
-        const firstName = initDataUnsafe.user?.first_name || "Сотрудник";
+        // Улучшено: Пытаемся взять chat_id из параметров ссылки бота (для ПК) или из initData (для телефона)
+        let chatId = urlParams.get('chat_id') || tg?.initDataUnsafe?.user?.id;
+        let firstName = tg?.initDataUnsafe?.user?.first_name || "Сотрудник";
 
         if (reportType === 'morning') {
             document.getElementById('report-title').innerText = '📊 УТРЕННИЙ ОТЧЕТ';
@@ -95,13 +33,18 @@
                 return;
             }
 
+            // Если chat_id так и не удалось найти (для тестов вне Телеграма)
+            if (!chatId) {
+                chatId = prompt("Браузер не определил ваш Telegram ID. Введите ваш chat_id вручную для теста:");
+                if (!chatId) return;
+            }
+
             btn.disabled = true;
             btn.innerText = "Отправка...";
 
-            // Собираем данные в структуру для передачи бэкенду
             const payload = {
                 is_direct_fetch: true,
-                chat_id: chatId,
+                chat_id: String(chatId).trim(),
                 first_name: firstName,
                 data: {
                     type: reportType,
@@ -121,7 +64,6 @@
             }
 
             try {
-                // Прямой сетевой запрос в обход ограничений Telegram Desktop
                 const response = await fetch(YANDEX_FUNCTION_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -129,7 +71,10 @@
                 });
 
                 if (response.ok) {
-                    if (tg) tg.close();
+                    btn.innerText = "Успешно отправлено!";
+                    setTimeout(() => {
+                        if (tg) tg.close();
+                    }, 1000);
                 } else {
                     alert("Ошибка сервера при отправке отчета.");
                     btn.disabled = false;
@@ -142,5 +87,3 @@
             }
         }
     </script>
-</body>
-</html>
