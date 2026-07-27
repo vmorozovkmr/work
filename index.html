@@ -44,25 +44,43 @@
       <div class="back" id="btn-back">← Вернуться к выбору</div>
       <div id="evening-only">
         <div class="section">
-          <div class="title">📂 Документооборот и учет:</div>
-          <div class="row"><span>Кассовая книга:</span><select id="kassa"><option value="🟢 Скинута">🟢 Скинута</option><option value="🔴 Нет">🔴 Нет</option></select></div>
-          <div class="row"><span>Отчет ИИ:</span><select id="ii"><option value="🟢 Заполнен">🟢 Заполнен</option><option value="🔴 Нет">🔴 Нет</option></select></div>
-          <div class="row"><span>Реестр:</span><select id="reestr"><option value="🟢 Заполнен">🟢 Заполнен</option><option value="🔴 Нет">🔴 Нет</option></select></div>
+          <div class="title">📁 Документооборот и учёт</div>
+          <div class="row">
+            <span>Кассовая книга:</span>
+            <select id="kassa">
+              <option value="скинута">🟢 скинута</option>
+              <option value="не скинута">🔴 не скинута</option>
+            </select>
+          </div>
+          <div class="row">
+            <span>Отчёт ИИ:</span>
+            <select id="ii">
+              <option value="заполнен">🟢 заполнен</option>
+              <option value="не заполнен">🔴 не заполнен</option>
+            </select>
+          </div>
+          <div class="row">
+            <span>Реестр:</span>
+            <select id="reestr">
+              <option value="заполнен">🟢 заполнен</option>
+              <option value="не заполнен">🔴 не заполнен</option>
+            </select>
+          </div>
         </div>
         <div class="section">
-          <div class="title">📱 Маркетинг и соцсети:</div>
-          <div class="row"><span>📹 Размещено в ВК:</span><input type="number" id="vk" value="0" min="0" step="1" inputmode="numeric"></div>
-          <div class="row"><span>✈️🔖 Размещено в ТГ:</span><input type="number" id="tg" value="0" min="0" step="1" inputmode="numeric"></div>
-          <div class="row"><span>📺 Размещено в Макс:</span><input type="number" id="max" value="0" min="0" step="1" inputmode="numeric"></div>
+          <div class="title">📲 Посты в соцсетях</div>
+          <div class="row"><span>🔵 VK:</span><input type="number" id="vk" value="0" min="0" step="1" inputmode="numeric"></div>
+          <div class="row"><span>✈️ TG:</span><input type="number" id="tg" value="0" min="0" step="1" inputmode="numeric"></div>
+          <div class="row"><span>🟣 MAX:</span><input type="number" id="max" value="0" min="0" step="1" inputmode="numeric"></div>
         </div>
       </div>
       <div class="section">
-        <div class="title">💰 Финансовый остаток:</div>
+        <div class="title">💰 Финансовый остаток</div>
         <div class="hint">Указывайте суммы в рублях (можно с копейками через точку)</div>
         <!-- Порядок: 1С → Касса → Карта -->
-        <div class="row"><span>🖥 В 1С денег:</span><input type="number" id="onec" placeholder="руб." min="0" step="0.01" inputmode="decimal"></div>
-        <div class="row"><span>💵 В кассе денег:</span><input type="number" id="cash" placeholder="руб." min="0" step="0.01" inputmode="decimal"></div>
-        <div class="row"><span>💳 На карте денег:</span><input type="number" id="card" placeholder="руб." min="0" step="0.01" inputmode="decimal"></div>
+        <div class="row"><span>🧮 1С:</span><input type="number" id="onec" placeholder="руб." min="0" step="0.01" inputmode="decimal"></div>
+        <div class="row"><span>💵 Касса:</span><input type="number" id="cash" placeholder="руб." min="0" step="0.01" inputmode="decimal"></div>
+        <div class="row"><span>💳 Карта:</span><input type="number" id="card" placeholder="руб." min="0" step="0.01" inputmode="decimal"></div>
       </div>
       <div class="controls">
         <button id="preview-btn" class="secondary">Показать/Обновить превью</button>
@@ -76,7 +94,7 @@
     // Замените на реальный URL вашей Яндекс-функции
     const YANDEX_FUNCTION_URL = "https://functions.yandexcloud.net/d4eh7b1d5l3nqapgrh9o";
     const SEND_TIMEOUT_MS = 10000;
-    const DRAFT_KEY = 'report_form_draft_final_v1';
+    const DRAFT_KEY = 'report_form_draft_final_v2';
     // Telegram WebApp SDK (если доступен)
     const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
     try { if (tg) { tg.ready(); tg.expand(); } } catch (e) {}
@@ -117,35 +135,45 @@
       const card = parseMoney(fields.card.value) ?? 0;
       return (c + card).toFixed(2);
     }
+    function getStatusEmoji(value) {
+      // value приходит как "скинута" / "не скинута" / "заполнен" / "не заполнен"
+      if (value.startsWith('не ')) return '🔴';
+      return '🟢';
+    }
     function buildReportText(type) {
       const cash = fields.cash.value || '0';
       const onec = fields.onec.value || '0';
       const card = fields.card.value || '0';
       const total = computeTotal();
       const lines = [];
+
       if (type === 'evening') {
-        lines.push('📊 ВЕЧЕРНИЙ ОТЧЕТ', '');
-        lines.push('📂 Документооборот и учет:');
-        lines.push(`• Кассовая книга: ${fields.kassa.value}`);
-        lines.push(`• Отчет ИИ: ${fields.ii.value}`);
-        lines.push(`• Реестр: ${fields.reestr.value}`, '');
-        lines.push('📱 Маркетинг и соцсети');
-        lines.push(`• 📹 Размещено в ВК: ${fields.vk.value || '0'} постов`);
-        lines.push(`• ✈️🔖 Размещено в ТГ: ${fields.tg.value || '0'} постов`);
-        lines.push(`• 📺 Размещено в Макс: ${fields.max.value || '0'} постов`, '');
-        lines.push('💰 Финансовый остаток:');
-        // Порядок: 1С → Касса → Карта
-        lines.push(`• 🖥 В 1С денег: ${onec} руб.`);
-        lines.push(`• 💵 В кассе денег: ${cash} руб.`);
-        lines.push(`• 💳 На карте денег: ${card} руб.`);
+        lines.push('📊 ВЕЧЕРНИЙ ОТЧЁТ', '');
+
+        // Документооборот
+        lines.push('📁 Документооборот и учёт');
+        lines.push(`${getStatusEmoji(fields.kassa.value)} Кассовая книга — ${fields.kassa.value}`);
+        lines.push(`${getStatusEmoji(fields.ii.value)} Отчёт ИИ — ${fields.ii.value}`);
+        lines.push(`${getStatusEmoji(fields.reestr.value)} Реестр — ${fields.reestr.value}`, '');
+
+        // Соцсети
+        lines.push('📲 Посты в соцсетях');
+        lines.push(`🔵 VK: ${fields.vk.value || '0'} шт.`);
+        lines.push(`✈️ TG: ${fields.tg.value || '0'} шт.`);
+        lines.push(`🟣 MAX: ${fields.max.value || '0'} шт.`, '');
+
+        // Финансы
+        lines.push('💰 Финансовый остаток');
+        lines.push(`🧮 1С: ${onec} руб.`);
+        lines.push(`💵 Касса: ${cash} руб.`);
+        lines.push(`💳 Карта: ${card} руб.`);
         lines.push('', `Итого: ${total} руб.`);
       } else {
-        lines.push('📊 УТРЕННИЙ ОТЧЕТ', '');
-        lines.push('💰 Финансовый остаток:');
-        // Порядок: 1С → Касса → Карта
-        lines.push(`• 🖥 В 1С денег: ${onec} руб.`);
-        lines.push(`• 💵 В кассе денег: ${cash} руб.`);
-        lines.push(`• 💳 На карте денег: ${card} руб.`);
+        lines.push('📊 УТРЕННИЙ ОТЧЁТ', '');
+        lines.push('💰 Финансовый остаток');
+        lines.push(`🧮 1С: ${onec} руб.`);
+        lines.push(`💵 Касса: ${cash} руб.`);
+        lines.push(`💳 Карта: ${card} руб.`);
         lines.push('', `Итого: ${total} руб.`);
       }
       return lines.join('\n');
