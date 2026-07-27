@@ -17,7 +17,7 @@
     .section { margin-bottom:14px; border-bottom:1px solid #eee; padding-bottom:12px; }
     .title { font-weight:700; margin-bottom:8px; }
     .row { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:8px; }
-    input[type="number"], select { padding:8px; border:1px solid #ccc; border-radius:6px; min-width:120px; }
+    input[type="number"], select { padding:8px; border:1px solid #ccc; border-radius:6px; min-width:140px; }
     input[type="number"] { width:160px; }
     button.send { width:100%; padding:12px; border-radius:10px; background:var(--primary); color:#fff; border:none; cursor:pointer; font-size:16px; }
     button.secondary { background:#f0f0f0; color:#333; border:1px solid #ddd; padding:8px 10px; border-radius:8px; cursor:pointer; }
@@ -42,14 +42,44 @@
     </div>
     <div id="form-screen" class="hidden">
       <div class="back" id="btn-back">← Вернуться к выбору</div>
-      <div id="evening-only">
+
+      <!-- Блок только для УТРЕННЕГО отчёта -->
+      <div id="morning-only" class="hidden">
+        <div class="section">
+          <div class="title">📁 Документооборот и учёт</div>
+          <div class="row">
+            <span>Кассовая книга:</span>
+            <select id="kassa_morning">
+              <option value="отправлена">🟢 отправлена</option>
+              <option value="не отправлена">🔴 не отправлена</option>
+            </select>
+          </div>
+          <div class="row">
+            <span>Фото об открытии:</span>
+            <select id="photo_open">
+              <option value="отправлены">🟢 отправлены</option>
+              <option value="не отправлены">🔴 не отправлены</option>
+            </select>
+          </div>
+          <div class="row">
+            <span>Отчёт Анастасии Андреевне:</span>
+            <select id="report_anastasia_morning">
+              <option value="отправлен">🟢 отправлен</option>
+              <option value="не отправлен">🔴 не отправлен</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Блок только для ВЕЧЕРНЕГО отчёта -->
+      <div id="evening-only" class="hidden">
         <div class="section">
           <div class="title">📁 Документооборот и учёт</div>
           <div class="row">
             <span>Кассовая книга:</span>
             <select id="kassa">
-              <option value="скинута">🟢 скинута</option>
-              <option value="не скинута">🔴 не скинута</option>
+              <option value="отправлена">🟢 отправлена</option>
+              <option value="не отправлена">🔴 не отправлена</option>
             </select>
           </div>
           <div class="row">
@@ -66,6 +96,20 @@
               <option value="не заполнен">🔴 не заполнен</option>
             </select>
           </div>
+          <div class="row">
+            <span>Отчёт Анастасии Андреевне:</span>
+            <select id="report_anastasia">
+              <option value="отправлен">🟢 отправлен</option>
+              <option value="не отправлен">🔴 не отправлен</option>
+            </select>
+          </div>
+          <div class="row">
+            <span>Фото о закрытии:</span>
+            <select id="photo_close">
+              <option value="отправлены">🟢 отправлены</option>
+              <option value="не отправлены">🔴 не отправлены</option>
+            </select>
+          </div>
         </div>
         <div class="section">
           <div class="title">📲 Посты в соцсетях</div>
@@ -74,14 +118,16 @@
           <div class="row"><span>🟣 MAX:</span><input type="number" id="max" value="0" min="0" step="1" inputmode="numeric"></div>
         </div>
       </div>
+
+      <!-- Финансы — общие для обоих отчётов -->
       <div class="section">
         <div class="title">💰 Финансовый остаток</div>
         <div class="hint">Указывайте суммы в рублях (можно с копейками через точку)</div>
-        <!-- Порядок: 1С → Касса → Карта -->
         <div class="row"><span>🧮 1С:</span><input type="number" id="onec" placeholder="руб." min="0" step="0.01" inputmode="decimal"></div>
         <div class="row"><span>💵 Касса:</span><input type="number" id="cash" placeholder="руб." min="0" step="0.01" inputmode="decimal"></div>
         <div class="row"><span>💳 Карта:</span><input type="number" id="card" placeholder="руб." min="0" step="0.01" inputmode="decimal"></div>
       </div>
+
       <div class="controls">
         <button id="preview-btn" class="secondary">Показать/Обновить превью</button>
         <button id="send-btn" class="send">Отправить отчет</button>
@@ -90,14 +136,15 @@
       <div id="preview" class="hidden" aria-live="polite"></div>
     </div>
   </div>
+
   <script>
-    // Замените на реальный URL вашей Яндекс-функции
     const YANDEX_FUNCTION_URL = "https://functions.yandexcloud.net/d4eh7b1d5l3nqapgrh9o";
     const SEND_TIMEOUT_MS = 10000;
-    const DRAFT_KEY = 'report_form_draft_final_v2';
-    // Telegram WebApp SDK (если доступен)
+    const DRAFT_KEY = 'report_form_draft_final_v3';
+
     const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
     try { if (tg) { tg.ready(); tg.expand(); } } catch (e) {}
+
     const choiceScreen = document.getElementById('choice-screen');
     const formScreen = document.getElementById('form-screen');
     const btnMorning = document.getElementById('btn-morning');
@@ -107,39 +154,55 @@
     const previewBtn = document.getElementById('preview-btn');
     const sendBtn = document.getElementById('send-btn');
     const statusEl = document.getElementById('status');
+    const morningBlock = document.getElementById('morning-only');
     const eveningBlock = document.getElementById('evening-only');
+
     const fields = {
+      // Утро
+      kassa_morning: document.getElementById('kassa_morning'),
+      photo_open: document.getElementById('photo_open'),
+      report_anastasia_morning: document.getElementById('report_anastasia_morning'),
+      // Вечер
       kassa: document.getElementById('kassa'),
       ii: document.getElementById('ii'),
       reestr: document.getElementById('reestr'),
+      report_anastasia: document.getElementById('report_anastasia'),
+      photo_close: document.getElementById('photo_close'),
       vk: document.getElementById('vk'),
       tg: document.getElementById('tg'),
       max: document.getElementById('max'),
+      // Общие
       cash: document.getElementById('cash'),
       onec: document.getElementById('onec'),
       card: document.getElementById('card')
     };
-    let currentType = null; // 'morning' | 'evening'
+
+    let currentType = null;
+
     function setStatus(text, isError=false) {
       statusEl.textContent = text || '';
       statusEl.style.color = isError ? 'crimson' : 'green';
     }
+
     function parseMoney(v) {
       if (v === undefined || v === null || v === '') return null;
       const n = Number(String(v).replace(',', '.'));
       return Number.isFinite(n) && n >= 0 ? n : null;
     }
-    // Итого = только касса + карта (1С НЕ учитывается)
+
+    // Итого = только касса + карта (1С не учитывается)
     function computeTotal() {
       const c = parseMoney(fields.cash.value) ?? 0;
       const card = parseMoney(fields.card.value) ?? 0;
       return (c + card).toFixed(2);
     }
+
     function getStatusEmoji(value) {
-      // value приходит как "скинута" / "не скинута" / "заполнен" / "не заполнен"
+      if (!value) return '🔴';
       if (value.startsWith('не ')) return '🔴';
       return '🟢';
     }
+
     function buildReportText(type) {
       const cash = fields.cash.value || '0';
       const onec = fields.onec.value || '0';
@@ -149,27 +212,28 @@
 
       if (type === 'evening') {
         lines.push('📊 ВЕЧЕРНИЙ ОТЧЁТ', '');
-
-        // Документооборот
         lines.push('📁 Документооборот и учёт');
         lines.push(`${getStatusEmoji(fields.kassa.value)} Кассовая книга — ${fields.kassa.value}`);
         lines.push(`${getStatusEmoji(fields.ii.value)} Отчёт ИИ — ${fields.ii.value}`);
-        lines.push(`${getStatusEmoji(fields.reestr.value)} Реестр — ${fields.reestr.value}`, '');
-
-        // Соцсети
+        lines.push(`${getStatusEmoji(fields.reestr.value)} Реестр — ${fields.reestr.value}`);
+        lines.push(`${getStatusEmoji(fields.report_anastasia.value)} Отчёт Анастасии Андреевне — ${fields.report_anastasia.value}`);
+        lines.push(`${getStatusEmoji(fields.photo_close.value)} Фото о закрытии — ${fields.photo_close.value}`, '');
         lines.push('📲 Посты в соцсетях');
         lines.push(`🔵 VK: ${fields.vk.value || '0'} шт.`);
         lines.push(`✈️ TG: ${fields.tg.value || '0'} шт.`);
         lines.push(`🟣 MAX: ${fields.max.value || '0'} шт.`, '');
-
-        // Финансы
         lines.push('💰 Финансовый остаток');
         lines.push(`🧮 1С: ${onec} руб.`);
         lines.push(`💵 Касса: ${cash} руб.`);
         lines.push(`💳 Карта: ${card} руб.`);
         lines.push('', `Итого: ${total} руб.`);
       } else {
+        // Утренний
         lines.push('📊 УТРЕННИЙ ОТЧЁТ', '');
+        lines.push('📁 Документооборот и учёт');
+        lines.push(`${getStatusEmoji(fields.kassa_morning.value)} Кассовая книга — ${fields.kassa_morning.value}`);
+        lines.push(`${getStatusEmoji(fields.photo_open.value)} Фото об открытии — ${fields.photo_open.value}`);
+        lines.push(`${getStatusEmoji(fields.report_anastasia_morning.value)} Отчёт Анастасии Андреевне — ${fields.report_anastasia_morning.value}`, '');
         lines.push('💰 Финансовый остаток');
         lines.push(`🧮 1С: ${onec} руб.`);
         lines.push(`💵 Касса: ${cash} руб.`);
@@ -178,6 +242,7 @@
       }
       return lines.join('\n');
     }
+
     function updatePreview() {
       if (!currentType) return;
       const text = buildReportText(currentType);
@@ -186,37 +251,59 @@
       setStatus('Превью обновлено', false);
       setTimeout(() => { if (statusEl.textContent === 'Превью обновлено') setStatus(''); }, 1200);
     }
+
     function validate() {
       const c = parseMoney(fields.cash.value);
       const o = parseMoney(fields.onec.value);
       const card = parseMoney(fields.card.value);
-      if (c === null || o === null || card === null) return { ok:false, msg:'Заполните корректно все финансовые поля (числа >= 0).' };
-      return { ok:true };
+      if (c === null || o === null || card === null) {
+        return { ok: false, msg: 'Заполните корректно все финансовые поля (числа >= 0).' };
+      }
+      return { ok: true };
     }
+
     function saveDraft() {
       try {
         const draft = { type: currentType };
-        Object.keys(fields).forEach(k => draft[k] = fields[k].value);
+        Object.keys(fields).forEach(k => {
+          if (fields[k]) draft[k] = fields[k].value;
+        });
         localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-      } catch(e) {}
+      } catch (e) {}
     }
+
     function loadDraftIfMatches(type) {
       try {
         const raw = localStorage.getItem(DRAFT_KEY);
         if (!raw) return;
         const d = JSON.parse(raw);
         if (d.type && d.type !== type) return;
-        Object.keys(fields).forEach(k => { if (d[k] !== undefined) fields[k].value = d[k]; });
-      } catch(e) {}
+        Object.keys(fields).forEach(k => {
+          if (d[k] !== undefined && fields[k]) fields[k].value = d[k];
+        });
+      } catch (e) {}
     }
-    function clearDraft() { localStorage.removeItem(DRAFT_KEY); }
+
+    function clearDraft() {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+
     let saveTimer = null;
     function onFieldChange() {
       if (saveTimer) clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => { saveDraft(); saveTimer = null; setStatus('Черновик сохранён', false); setTimeout(()=>setStatus(''),1200); }, 700);
+      saveTimer = setTimeout(() => {
+        saveDraft();
+        saveTimer = null;
+        setStatus('Черновик сохранён', false);
+        setTimeout(() => setStatus(''), 1200);
+      }, 700);
     }
-    Object.values(fields).forEach(el => el && el.addEventListener('input', () => { onFieldChange(); updatePreview(); }));
-    // Отправка с таймаутом
+
+    Object.values(fields).forEach(el => {
+      if (el) el.addEventListener('input', () => { onFieldChange(); updatePreview(); });
+      if (el && el.tagName === 'SELECT') el.addEventListener('change', () => { onFieldChange(); updatePreview(); });
+    });
+
     async function postWithTimeout(url, body, timeoutMs) {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -234,14 +321,18 @@
         throw err;
       }
     }
+
     async function sendReport() {
       setStatus('', false);
       const v = validate();
       if (!v.ok) { setStatus(v.msg, true); return; }
+
       sendBtn.disabled = true;
       const prevText = sendBtn.textContent;
       sendBtn.textContent = 'Отправка...';
+
       const reportText = buildReportText(currentType);
+
       const payload = {
         tg_init_data: tg?.initData || null,
         data: {
@@ -249,17 +340,25 @@
           cash: fields.cash.value || '0',
           onec: fields.onec.value || '0',
           card: fields.card.value || '0',
-          kassa: fields.kassa.value,
-          ii: fields.ii.value,
-          reestr: fields.reestr.value,
-          vk: fields.vk.value || '0',
-          tg: fields.tg.value || '0',
-          max: fields.max.value || '0',
+          // Утро
+          kassa_morning: fields.kassa_morning?.value,
+          photo_open: fields.photo_open?.value,
+          report_anastasia_morning: fields.report_anastasia_morning?.value,
+          // Вечер
+          kassa: fields.kassa?.value,
+          ii: fields.ii?.value,
+          reestr: fields.reestr?.value,
+          report_anastasia: fields.report_anastasia?.value,
+          photo_close: fields.photo_close?.value,
+          vk: fields.vk?.value || '0',
+          tg: fields.tg?.value || '0',
+          max: fields.max?.value || '0',
           total: computeTotal(),
         },
         report_text: reportText,
         created_at: new Date().toISOString()
       };
+
       try {
         const resp = await postWithTimeout(YANDEX_FUNCTION_URL, payload, SEND_TIMEOUT_MS);
         if (resp && resp.ok) {
@@ -273,7 +372,10 @@
           }, 900);
         } else {
           let msg = resp ? `Сервер вернул ${resp.status}` : 'Нет ответа от сервера';
-          try { const j = await resp.json(); if (j?.error) msg += ` — ${j.error}`; } catch(e) {}
+          try {
+            const j = await resp.json();
+            if (j?.error) msg += ` — ${j.error}`;
+          } catch (e) {}
           setStatus(msg, true);
           sendBtn.disabled = false;
           sendBtn.textContent = prevText;
@@ -285,16 +387,24 @@
         sendBtn.textContent = prevText;
       }
     }
-    // UI переключения
+
     function openForm(type) {
       currentType = type;
       choiceScreen.classList.add('hidden');
       formScreen.classList.remove('hidden');
-      if (type === 'morning') eveningBlock.style.display = 'none';
-      else eveningBlock.style.display = '';
+
+      if (type === 'morning') {
+        morningBlock.classList.remove('hidden');
+        eveningBlock.classList.add('hidden');
+      } else {
+        morningBlock.classList.add('hidden');
+        eveningBlock.classList.remove('hidden');
+      }
+
       loadDraftIfMatches(type);
       updatePreview();
     }
+
     btnMorning.addEventListener('click', () => openForm('morning'));
     btnEvening.addEventListener('click', () => openForm('evening'));
     btnBack.addEventListener('click', () => {
@@ -305,6 +415,7 @@
     });
     previewBtn.addEventListener('click', updatePreview);
     sendBtn.addEventListener('click', sendReport);
+
     // Авто-открытие по ?type=morning|evening
     (function autoOpenFromUrl() {
       const params = new URLSearchParams(window.location.search);
